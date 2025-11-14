@@ -15,6 +15,8 @@ app.use(express.json());
 // Express에 "정적(static) 파일 제공" 기능을 등록 (/public 폴더 안의 HTML, CSS 등을 제공)
 app.use(express.static(path.join(__dirname, "public")));
 
+
+
 app.use(logger);
 
 

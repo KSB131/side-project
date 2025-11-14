@@ -5,7 +5,7 @@ const path = require('path');
 const filePath = path.join(__dirname, '..', 'public');
 
 router.get('/', (req, res) => {
-    res.sendFile(path.join(filePath, 'index.html'))
+    res.sendFile(path.join(filePath, 'login.html'))
 })
 
 router.get('/main', (req, res) => {
@@ -14,6 +14,10 @@ router.get('/main', (req, res) => {
 
 router.get('/register', (req, res) => {
     res.sendFile(path.join(filePath, 'register.html'))
+})
+
+router.get('/dashboard', (req, res) => {
+    res.sendFile(path.join(filePath, 'dashboard.html'))
 })
 
 module.exports = router;

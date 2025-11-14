@@ -1,11 +1,135 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>메인 페이지</title>
+    <link rel="stylesheet" href="/main.css">
 </head>
 <body>
-    <h1>메인 페이지</h1>
+    <header>
+        <h1>환영합니다!</h1>
+        <nav>
+            <a href="/">홈</a>
+            <a href="/profile">프로필</a>
+            <a href="/logout" id="logoutBtn">로그아웃</a>
+            <a href="/dashboard">대시보드</a>
+        </nav>
+    </header>
+
+    <!-- 메인 전체를 감싸는 요소 (숨김/표시 토글 대상) -->
+    <main id="main-content">
+        <section class="welcome-section">
+            <h2>안녕하세요, 사용자님!</h2>
+            <p>이곳은 메인 페이지입니다. 원하는 기능을 이용해보세요.</p>
+        </section>
+
+        <section class="cards">
+            <div class="card">
+                <h3>공지사항</h3>
+                <p>새로운 공지가 있습니다. 확인해보세요!</p>
+                <!-- show('schedule') 대신 openSchedule() 호출 -->
+                <button id="notice" type="button" onclick="openSchedule()">자세히 보기</button>
+            </div>
+            <div class="card">
+                <h3>업데이트</h3>
+                <p>서비스 업데이트 정보를 확인하세요.</p>
+                <button id="update" type="button">자세히 보기</button>
+            </div>
+            <div class="card">
+                <h3>문의</h3>
+                <p>문의사항이 있으면 여기를 클릭하세요.</p>
+                <button id="call" type="button">문의하기</button>
+            </div>
+        </section>
+    </main>
+
+    <!-- 평소에는 숨김. 보여줄 때는 main-content를 숨기고 이 섹션만 표시 -->
+    <section id="schedule" class="hidden" tabindex="-1" aria-hidden="true">
+        <h2>📅 우리들의 일정</h2>
+        <p>여기에 일정 목록을 표시합니다.</p>
+
+        <button type="button">새 일정 추가하기</button>
+        <div>
+            <button type="button" class="btn-ghost" onclick="backToMain()">메인으로 돌아가기</button>
+        </div>
+    </section>
+
+    <footer>
+        <p>&copy; 2025 My Project. All rights reserved.</p>
+    </footer>
+
+    <script>
+        // 참고: main-content, schedule 엘리먼트를 제어해서 화면을 전환합니다.
+        const mainEl = document.getElementById('main-content');
+        const scheduleEl = document.getElementById('schedule');
+        const logoutBtn = document.getElementById('logoutBtn');
+
+        function openSchedule() {
+            // 메인 숨기고 스케줄 보이기
+            mainEl.classList.add('hidden');
+            scheduleEl.classList.remove('hidden');
+
+            // 접근성: 스크린리더가 읽을 수 있게 변경
+            scheduleEl.setAttribute('aria-hidden', 'false');
+
+            // 포커스 이동 (tabindex="-1" 필요)
+            scheduleEl.focus({ preventScroll: true });
+
+            // URL에 해시를 추가해서 뒤로가기 동작을 자연스럽게 함
+            history.pushState({ page: 'schedule' }, '', '#schedule');
+        }
+
+        function backToMain() {
+            // 스케줄 숨기고 메인 보이기
+            scheduleEl.classList.add('hidden');
+            mainEl.classList.remove('hidden');
+
+            scheduleEl.setAttribute('aria-hidden', 'true');
+
+            // 포커스 메인 상단으로
+            const firstHeading = mainEl.querySelector('h2');
+            if (firstHeading) firstHeading.focus();
+
+            // URL에서 해시 제거 (뒤로가기 흐름이 이미 pushState로 쌓였으면 popstate에서 처리됨)
+            if (location.hash === '#schedule') {
+                history.pushState({}, '', location.pathname + location.search);
+            }
+        }
+
+        // 브라우저 뒤로/앞 버튼 처리: popstate 이벤트
+        window.addEventListener('popstate', (e) => {
+            // 해시나 상태에 따라 표시
+            if (location.hash === '#schedule' || (e.state && e.state.page === 'schedule')) {
+                mainEl.classList.add('hidden');
+                scheduleEl.classList.remove('hidden');
+                scheduleEl.setAttribute('aria-hidden', 'false');
+                scheduleEl.focus({ preventScroll: true });
+            } else {
+                scheduleEl.classList.add('hidden');
+                mainEl.classList.remove('hidden');
+                scheduleEl.setAttribute('aria-hidden', 'true');
+            }
+        });
+
+        // 페이지 로드 시 URL에 #schedule이 있으면 그 상태로 보여줌 (직접 링크 대응)
+        window.addEventListener('load', () => {
+            if (location.hash === '#schedule') {
+                history.replaceState({ page: 'schedule' }, '', '#schedule');
+                mainEl.classList.add('hidden');
+                scheduleEl.classList.remove('hidden');
+                scheduleEl.setAttribute('aria-hidden', 'false');
+                scheduleEl.focus({ preventScroll: true });
+            }
+        });
+
+        // 로그아웃 버튼 예시
+        logoutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            localStorage.removeItem('token');
+            alert('로그아웃 되었습니다.');
+            window.location.href = '/';
+        });
+    </script>
 </body>
 </html>

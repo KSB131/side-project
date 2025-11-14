@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>메인 페이지</title>
+    <link rel="stylesheet" href="/main.css">
+</head>
+<body>
+    <header>
+        <h1>환영합니다!</h1>
+        <nav>
+            <a href="/">홈</a>
+            <a href="/profile">프로필</a>
+            <a href="/logout" id="logoutBtn">로그아웃</a>
+        </nav>
+    </header>
+
+    <main>
+        <section class="welcome-section">
+            <h2>안녕하세요, 사용자님!</h2>
+            <p>이곳은 메인 페이지입니다. 원하는 기능을 이용해보세요.</p>
+        </section>
+
+        <section class="cards">
+            <div class="card">
+                <h3>공지사항</h3>
+                <p>새로운 공지가 있습니다. 확인해보세요!</p>
+                <button id="notice" onclick="show('schedule')">자세히 보기</button>
+            </div>
+            <div class="card">
+                <h3>업데이트</h3>
+                <p>서비스 업데이트 정보를 확인하세요.</p>
+                <button id="update">자세히 보기</button>
+            </div>
+            <div class="card">
+                <h3>문의</h3>
+                <p>문의사항이 있으면 여기를 클릭하세요.</p>
+                <button id="call">문의하기</button>
+            </div>
+        </section>
+        
+    </main>
+    <section id="schedule">
+            <h2>📅 우리들의 일정</h2>
+            <button>새 일정 추가하기</button>
+        </section>
+    <footer>
+        <p>&copy; 2025 My Project. All rights reserved.</p>
+    </footer>
+
+    <script>
+        // 일정 섹션
+
+
+        // 로그아웃 버튼 예시
+        const logoutBtn = document.getElementById('logoutBtn');
+        logoutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            localStorage.removeItem('token');
+            alert('로그아웃 되었습니다.');
+            window.location.href = '/';
+        });
+    </script>
+</body>
+</html>

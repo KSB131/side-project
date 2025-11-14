@@ -44,6 +44,10 @@ router.post('/login', (req, res) => {
     const params = [id, pw];
 
     db.execute(sql, params, (err, rows) => {
+        if(err) {
+            return res.status(500).json({ success: false, message: "서버 오류"})
+        }
+
         if(rows.length > 0){
             // 로그인성공
             // JWT 발급
@@ -53,7 +57,11 @@ router.post('/login', (req, res) => {
             }, "my-secret-key", {
                 expiresIn: '1h'
             })
-        };
+            return res.json({ success: true, message: "로그인 성공"})
+        }
+        else {
+            return res.json({ success: false, message: "로그인 실패"})
+        }
     });
 });
 

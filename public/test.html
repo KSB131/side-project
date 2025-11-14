@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>메인 / 일정 전환 예제</title>
+<style>
+/* 공통 레이아웃 */
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  margin: 20px;
+  background: #fafafa;
+}
+
+/* 카드 그리드 */
+.cards {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* 카드 스타일 */
+.card {
+  background-color: white;
+  padding: 20px;
+  width: 250px;
+  height: 200px;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+  text-align: center;
+  transition: transform 0.2s ease;
+  position: relative; /* 버튼 절대위치 기준 */
+}
+.card:hover { transform: translateY(-5px); }
+
+.card h3 { margin-bottom: 10px; color: #4CAF50; }
+.card p { margin-bottom: 15px; color: #666; font-size: 14px; }
+
+/* 버튼 하단 고정(카드 내부 기준) */
+.card button {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.card button:hover { background-color: #45a049; }
+
+/* 메인 컨텐츠 / 숨김 처리용 */
+.hidden { display: none !important; }
+
+/* schedule 섹션 스타일 */
+#schedule {
+  margin: 0 auto;
+  max-width: 760px;
+  padding: 24px;
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  text-align: center;
+}
+
+/* 작은 도우미 버튼 */
+.btn-ghost {
+  margin-top: 12px;
+  background: transparent;
+  border: 1px solid #888;
+  color: #333;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+</style>
+</head>
+<body>
+
+<!-- 전체 내용 감싸기 -->
+<main id="main-content">
+  <section class="welcome-section">
+      <h2>안녕하세요, 사용자님!</h2>
+      <p>이곳은 메인 페이지입니다. 원하는 기능을 이용해보세요.</p>
+  </section>
+
+  <section class="cards">
+      <div class="card">
+          <h3>공지사항</h3>
+          <p>새로운 공지가 있습니다. 확인해보세요!</p>
+          <button id="notice" type="button" onclick="openSchedule()">자세히 보기</button>
+      </div>
+      <div class="card">
+          <h3>업데이트</h3>
+          <p>서비스 업데이트 정보를 확인하세요.</p>
+          <button id="update" type="button">자세히 보기</button>
+      </div>
+      <div class="card">
+          <h3>문의</h3>
+          <p>문의사항이 있으면 여기를 클릭하세요.</p>
+          <button id="call" type="button">문의하기</button>
+      </div>
+  </section>
+</main>
+
+<!-- 평소 보이지 않음. 보여줄 때만 display:block -->
+<section id="schedule" class="hidden" tabindex="-1" aria-hidden="true">
+  <h2>📅 우리들의 일정</h2>
+  <p>여기에 일정을 표시합니다. (예시 내용)</p>
+
+  <button type="button">새 일정 추가하기</button>
+  <div>
+    <button type="button" class="btn-ghost" onclick="backToMain()">메인으로 돌아가기</button>
+  </div>
+</section>
+
+<script>
+/*
+  동작 설명:
+  - openSchedule(): 메인(#main-content)을 숨기고 #schedule을 보이게 만든 뒤 포커스 이동.
+  - backToMain(): #schedule 숨기고 메인 보여주기.
+  - history.pushState / popstate: 브라우저 뒤로가기/앞으로가기를 지원.
+*/
+
+const mainEl = document.getElementById('main-content');
+const scheduleEl = document.getElementById('schedule');
+
+function openSchedule() {
+  // 화면 전환
+  mainEl.classList.add('hidden');
+  scheduleEl.classList.remove('hidden');
+
+  // 접근성: 스크린리더에 보이는 상태로 변경
+  scheduleEl.setAttribute('aria-hidden', 'false');
+
+  // 포커스 이동 (tabindex="-1" 있어야 함)
+  scheduleEl.focus({ preventScroll: true });
+
+  // URL에 #schedule 추가 및 history 상태 저장 (뒤로가기 동작을 위해)
+  history.pushState({ page: 'schedule' }, '', '#schedule');
+}
+
+function backToMain() {
+  // 화면 전환
+  scheduleEl.classList.add('hidden');
+  mainEl.classList.remove('hidden');
+
+  scheduleEl.setAttribute('aria-hidden', 'true');
+
+  // 포커스 메인으로
+  mainEl.querySelector('h2')?.focus?.();
+
+  // 뒤로가기를 사용할 경우 깔끔하게 상태를 복구
+  // pushState를 쓴 뒤 back을 눌렀을 때 popstate가 실행되므로
+  // 여기서는 history.back() 대신 URL 상태를 기본으로 돌립니다.
+  // 만약 현재 해시가 #schedule이면 해시 제거
+  if (location.hash === '#schedule') {
+    history.pushState({}, '', location.pathname + location.search);
+  }
+}
+
+// 브라우저 뒤로/앞 버튼 처리: popstate 이벤트에서 현재 상태에 따라 보이기/숨기기
+window.addEventListener('popstate', (e) => {
+  // 만약 해시가 #schedule 이거나 상태 객체가 schedule이면 schedule 보이기
+  if (location.hash === '#schedule' || (e.state && e.state.page === 'schedule')) {
+    mainEl.classList.add('hidden');
+    scheduleEl.classList.remove('hidden');
+    scheduleEl.setAttribute('aria-hidden', 'false');
+    scheduleEl.focus({ preventScroll: true });
+  } else {
+    // 기본(메인) 화면
+    scheduleEl.classList.add('hidden');
+    mainEl.classList.remove('hidden');
+    scheduleEl.setAttribute('aria-hidden', 'true');
+  }
+});
+
+// 페이지 로드 시 URL 해시가 #schedule이면 바로 schedule 보이게 (직접 링크 시)
+window.addEventListener('load', () => {
+  if (location.hash === '#schedule') {
+    // replaceState로 초기 history 상태 설정 후 openSchedule-like 처리
+    history.replaceState({ page: 'schedule' }, '', '#schedule');
+    mainEl.classList.add('hidden');
+    scheduleEl.classList.remove('hidden');
+    scheduleEl.setAttribute('aria-hidden', 'false');
+  }
+});
+</script>
+</body>
+</html>

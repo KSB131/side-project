@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>대시보드</title>
+  <link rel="stylesheet" href="/main.css">
+  <style>
+    /* 간단한 대시보드 전용 스타일 (main.css가 없거나 덮어쓰려면 이걸 사용) */
+    :root{--bg:#f7fafc;--card:#fff;--muted:#6b7280}
+    body{font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:var(--bg); color:#111; margin:0}
+    .container{max-width:1100px;margin:28px auto;padding:20px}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+    header h1{font-size:20px;margin:0}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:18px}
+    .card{background:var(--card);border-radius:12px;padding:16px;box-shadow:0 8px 20px rgba(15,23,42,0.06)}
+    .stat{display:flex;flex-direction:column}
+    .stat .num{font-size:20px;font-weight:700}
+    .stat .label{color:var(--muted);font-size:13px}
+    #charts{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+    canvas{width:100%!important;height:320px!important}
+    .list{max-height:320px;overflow:auto;padding:8px}
+    .list-item{padding:8px;border-bottom:1px solid #f1f5f9}
+    .controls{display:flex;gap:8px;align-items:center}
+    .btn{background:#111;color:#fff;padding:8px 12px;border-radius:8px;border:0;cursor:pointer}
+    @media (max-width:900px){.grid{grid-template-columns:repeat(1,1fr)}#charts{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>운영 대시보드</h1>
+      <div class="controls">
+        <button class="btn" id="refreshBtn">새로고침</button>
+        <button class="btn" id="realtimeToggle">실시간 켜기</button>
+      </div>
+    </header>
+
+    <section class="grid">
+      <div class="card stat">
+        <div class="num" id="totalUsers">-</div>
+        <div class="label">총 사용자</div>
+      </div>
+      <div class="card stat">
+        <div class="num" id="activeUsers">-</div>
+        <div class="label">활성 사용자 (최근 5분)</div>
+      </div>
+      <div class="card stat">
+        <div class="num" id="errorRate">-</div>
+        <div class="label">에러 비율 (24h)</div>
+      </div>
+    </section>
+
+    <section id="charts">
+      <div class="card">
+        <h3>트래픽 / 지표 추이</h3>
+        <canvas id="lineChart"></canvas>
+      </div>
+
+      <div class="card">
+        <h3>최근 이벤트</h3>
+        <div class="list" id="eventsList">
+          <!-- 이벤트 항목이 여기에 추가됨 -->
+        </div>
+      </div>
+    </section>
+
+    <footer style="margin-top:18px;color:var(--muted);font-size:13px">
+      해당 페이지는 /public/dashboard.html 파일입니다. 서버에서 실제 메트릭을 제공하려면 /api/metrics 같은 엔드포인트를 추가하세요.
+    </footer>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    const lineCtx = document.getElementById('lineChart').getContext('2d');
+    let lineChart;
+    let realtime = false;
+    const refreshBtn = document.getElementById('refreshBtn');
+    const realtimeToggle = document.getElementById('realtimeToggle');
+
+    function makeEmptyData(){
+      const labels = [];
+      const values = [];
+      const now = Date.now();
+      for(let i=5;i>=0;i--){
+        labels.push(new Date(now - i*10000).toLocaleTimeString());
+        values.push(Math.round(Math.random()*100));
+      }
+      return { labels, values };
+    }
+
+    function renderChart(data){
+      const config = {
+        type: 'line',
+        data: {
+          labels: data.labels,
+          datasets: [{
+            label: 'Requests / min',
+            data: data.values,
+            tension: 0.25,
+            fill: true,
+            backgroundColor: 'rgba(0,0,0,0.04)'
+          }]
+        },
+        options: {responsive:true, maintainAspectRatio:false, scales:{y:{beginAtZero:true}}}
+      };
+
+      if(lineChart){
+        lineChart.data.labels = config.data.labels;
+        lineChart.data.datasets[0].data = config.data.datasets[0].data;
+        lineChart.update();
+      } else {
+        lineChart = new Chart(lineCtx, config);
+      }
+    }
+
+    async function fetchMetrics(){
+      try{
+        const res = await fetch('/api/metrics');
+        if(!res.ok) throw new Error('no api');
+        const json = await res.json();
+        // 기대하는 포맷: { labels: [...], values: [...], totalUsers, activeUsers, errorRate, events: [...] }
+        const labels = json.labels || makeEmptyData().labels;
+        const values = json.values || makeEmptyData().values;
+        renderChart({labels, values});
+
+        document.getElementById('totalUsers').textContent = json.totalUsers ?? '-';
+        document.getElementById('activeUsers').textContent = json.activeUsers ?? '-';
+        document.getElementById('errorRate').textContent = json.errorRate != null ? (json.errorRate + '%') : '-';
+
+        const eventsList = document.getElementById('eventsList');
+        eventsList.innerHTML = '';
+        const events = json.events || [];
+        if(events.length === 0){
+          eventsList.innerHTML = '<div class="list-item">표시할 이벤트가 없습니다.</div>';
+        } else {
+          events.forEach(ev=>{
+            const el = document.createElement('div');
+            el.className = 'list-item';
+            el.textContent = `${ev.time} — ${ev.msg}`;
+            eventsList.appendChild(el);
+          })
+        }
+
+      }catch(err){
+        // API가 없으면 더미 데이터로 렌더
+        const data = makeEmptyData();
+        renderChart(data);
+        document.getElementById('totalUsers').textContent = Math.floor(Math.random()*10000);
+        document.getElementById('activeUsers').textContent = Math.floor(Math.random()*500);
+        document.getElementById('errorRate').textContent = (Math.random()*2).toFixed(2) + '%';
+        document.getElementById('eventsList').innerHTML = '<div class="list-item">(샘플) API(/api/metrics)가 없습니다. 더미 데이터 표시 중.</div>';
+      }
+    }
+
+    // 실시간 토글 (간단 구현: 주기 폴링 변환)
+    let intervalId = null;
+    function startRealtime(){
+      if(intervalId) clearInterval(intervalId);
+      intervalId = setInterval(fetchMetrics, 5000);
+      realtime = true; realtimeToggle.textContent = '실시간 끄기';
+    }
+    function stopRealtime(){
+      if(intervalId) clearInterval(intervalId);
+      intervalId = null; realtime = false; realtimeToggle.textContent = '실시간 켜기';
+    }
+
+    refreshBtn.addEventListener('click', fetchMetrics);
+    realtimeToggle.addEventListener('click', ()=>{
+      if(!realtime) startRealtime(); else stopRealtime();
+    });
+
+    // 초기 렌더
+    fetchMetrics();
+  </script>
+</body>
+</html>
