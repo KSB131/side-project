@@ -2,12 +2,12 @@ const express = require('express');
 const app = express();
 const PORT = 3000;
 const path = require('path');
+const db = require('./config/db')
 
 const logger = require('./middlewares/logger');
 
 const pageRouter = require('./routes/pageRouter');
 const apiRouter = require('./routes/apiRouter');
-const { log } = require('console');
 
 app.use(express.urlencoded({ extended : true}));
 app.use(express.json());
