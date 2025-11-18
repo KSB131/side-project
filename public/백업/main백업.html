@@ -13,45 +13,147 @@
             <a href="/">홈</a>
             <a href="/profile">프로필</a>
             <a href="/logout" id="logoutBtn">로그아웃</a>
+            <a href="/dashboard">대시보드</a>
         </nav>
     </header>
 
-    <main>
+    <!-- 메인 전체를 감싸는 요소 (숨김/표시 토글 대상) -->
+    <main id="main-content">
         <section class="welcome-section">
             <h2>안녕하세요, 사용자님!</h2>
             <p>이곳은 메인 페이지입니다. 원하는 기능을 이용해보세요.</p>
         </section>
-
+        
         <section class="cards">
+            <div class="card">
+                <h3>친구</h3>
+                <p>새로운 친구가 추가 되었습니다. 확인해보세요!</p>
+                <button id="friend" type="button" onclick="openFriends()">자세히 보기</button>
+            </div>
             <div class="card">
                 <h3>공지사항</h3>
                 <p>새로운 공지가 있습니다. 확인해보세요!</p>
-                <button id="notice" onclick="show('schedule')">자세히 보기</button>
+                <!-- show('schedule') 대신 openSchedule() 호출 -->
+                <button id="notice" type="button" onclick="openSchedule()">자세히 보기</button>
             </div>
             <div class="card">
                 <h3>업데이트</h3>
                 <p>서비스 업데이트 정보를 확인하세요.</p>
-                <button id="update">자세히 보기</button>
+                <button id="update" type="button">자세히 보기</button>
             </div>
             <div class="card">
                 <h3>문의</h3>
                 <p>문의사항이 있으면 여기를 클릭하세요.</p>
-                <button id="call">문의하기</button>
+                <button id="call" type="button">문의하기</button>
             </div>
         </section>
-        
     </main>
-    <section id="schedule">
-            <h2>📅 우리들의 일정</h2>
-            <button>새 일정 추가하기</button>
-        </section>
+
+    <!-- 평소에는 숨김. 보여줄 때는 main-content를 숨기고 이 섹션만 표시 -->
+    <section id="schedule" class="hidden" tabindex="-1" aria-hidden="true">
+        <h2>📅 우리들의 일정</h2>
+        <p>여기에 일정 목록을 표시합니다.</p>
+
+        <button type="button">새 일정 추가하기</button>
+        <div>
+            <button type="button" class="btn-ghost" onclick="backToMain()">메인으로 돌아가기</button>
+        </div>
+    </section>
+
+    <section id="friends" class="hidden" tabindex="-1" aria-hidden="true">
+        <h2>친구</h2>
+        <p>친구 목록을 표시합니다.</p>
+        <button onclick="loadFriendlist()">친구 목록 열기</button>
+        <div>
+            <button type="button" class="btn-ghost" onclick="backToMain()">메인으로 돌아가기</button>
+        </div>
+
+        <div id="friendlist">
+            <div id="friend-items"></div>
+        </div>
+    </section>
+
     <footer>
         <p>&copy; 2025 My Project. All rights reserved.</p>
     </footer>
 
     <script>
-        // 일정 섹션
+        const friendlistEl = document.getElementById("friendlist");
+        const friendItemsEl = document.getElementById("friend-items");
+        const friendSection = document.getElementById("friends");
+        let friendData = [
+            { name: "김영자", category: "운동", desc: "아침 운동", phone: "01012345678"}
+        ]
+        async function loadFriendlist() {
+            friends
+        }
+    </script>
+    <script>
+        // 요소 가져오기 (안전하게)
+        const mainEl = document.getElementById('main-content');
+        const scheduleEl = document.getElementById('schedule');
+        const friendsEl = document.getElementById('friends');
 
+        // 존재 확인 유틸
+        function exists(el) { return el instanceof Element; }
+
+        // 모든 섹션 목록 (메인 포함)
+        const sections = {
+            main: mainEl,
+            schedule: scheduleEl,
+            friends: friendsEl
+        };
+
+        // 섹션 보여주기/숨기기 공용 함수
+        function showSection(name, push = true) {
+            if (!sections[name]) return;
+
+            // 숨길 것 / 보일 것 결정
+            Object.entries(sections).forEach(([key, el]) => {
+                if (!exists(el)) return;
+                const isTarget = (key === name);
+                el.classList.toggle('hidden', !isTarget);
+                el.setAttribute('aria-hidden', (!isTarget).toString());
+            });
+
+            // 포커스 이동 (target 요소에 tabindex="-1" 있어야 함)
+            const target = sections[name];
+            if (exists(target)) {
+                try { target.focus({ preventScroll: true }); } catch(e) { /* 일부 브라우저 안전성 */ }
+            }
+
+            // history 관리: 해시와 state에 맞춰 저장
+            if (push) {
+                const urlHash = (name === 'main') ? (location.pathname + location.search) : `#${name}`;
+                const stateObj = (name === 'main') ? {} : { page: name };
+                history.pushState(stateObj, '', urlHash);
+            }
+        }
+
+        // 뒤로가기/앞으로가기 처리
+        window.addEventListener('popstate', (e) => {
+            // 우선 state에서 판단, 없으면 hash로 판단
+            const page = (e.state && e.state.page) ? e.state.page : (location.hash ? location.hash.replace('#', '') : 'main');
+            if (page in sections) showSection(page, false);
+            else showSection('main', false);
+        });
+
+        // 로드 시 해시/직접 링크 대응
+        window.addEventListener('load', () => {
+            const initial = location.hash ? location.hash.replace('#', '') : 'main';
+            if (initial in sections) {
+                // replaceState로 초기 상태 설정 (뒤로가기 과도한 쌓임 방지)
+                if (initial !== 'main') history.replaceState({ page: initial }, '', `#${initial}`);
+                showSection(initial, false);
+            } else {
+                showSection('main', false);
+            }
+        });
+
+        // 기존 개별 함수들은 아래처럼 간단히 연결
+        function openSchedule() { showSection('schedule'); }
+        function openFriends() { showSection('friends'); }
+        function backToMain() { showSection('main'); }
 
         // 로그아웃 버튼 예시
         const logoutBtn = document.getElementById('logoutBtn');
