@@ -1,194 +1,212 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>메인 / 일정 전환 예제</title>
-<style>
-/* 공통 레이아웃 */
-body {
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
-  margin: 20px;
-  background: #fafafa;
-}
-
-/* 카드 그리드 */
-.cards {
-  display: flex;
-  gap: 20px;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-/* 카드 스타일 */
-.card {
-  background-color: white;
-  padding: 20px;
-  width: 250px;
-  height: 200px;
-  border-radius: 12px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
-  text-align: center;
-  transition: transform 0.2s ease;
-  position: relative; /* 버튼 절대위치 기준 */
-}
-.card:hover { transform: translateY(-5px); }
-
-.card h3 { margin-bottom: 10px; color: #4CAF50; }
-.card p { margin-bottom: 15px; color: #666; font-size: 14px; }
-
-/* 버튼 하단 고정(카드 내부 기준) */
-.card button {
-  background-color: #4CAF50;
-  color: white;
-  border: none;
-  padding: 10px 15px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-  position: absolute;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-}
-.card button:hover { background-color: #45a049; }
-
-/* 메인 컨텐츠 / 숨김 처리용 */
-.hidden { display: none !important; }
-
-/* schedule 섹션 스타일 */
-#schedule {
-  margin: 0 auto;
-  max-width: 760px;
-  padding: 24px;
-  background-color: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  text-align: center;
-}
-
-/* 작은 도우미 버튼 */
-.btn-ghost {
-  margin-top: 12px;
-  background: transparent;
-  border: 1px solid #888;
-  color: #333;
-  padding: 8px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>메인 페이지</title>
+    <link rel="stylesheet" href="/main.css">
+    <style>
+        .hidden { display: none; }
+        .friend-card { padding: 8px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 8px; }
+        .friend-card p { margin: 4px 0; }
+        .btn-ghost { background: transparent; border: 1px solid #ccc; padding: 6px 10px; border-radius: 4px; }
+    </style>
 </head>
 <body>
+    <header>
+        <h1>환영합니다!</h1>
+        <nav>
+            <a href="/">홈</a>
+            <a href="/profile">프로필</a>
+            <a href="/logout" id="logoutBtn">로그아웃</a>
+            <a href="/dashboard">대시보드</a>
+        </nav>
+    </header>
 
-<!-- 전체 내용 감싸기 -->
-<main id="main-content">
-  <section class="welcome-section">
-      <h2>안녕하세요, 사용자님!</h2>
-      <p>이곳은 메인 페이지입니다. 원하는 기능을 이용해보세요.</p>
-  </section>
+    <!-- 메인 전체를 감싸는 요소 (숨김/표시 토글 대상) -->
+    <main id="main-content">
+        <section class="welcome-section">
+            <h2>안녕하세요, 사용자님!</h2>
+            <p>이곳은 메인 페이지입니다. 원하는 기능을 이용해보세요.</p>
+        </section>
+        
+        <section class="cards">
+            <div class="card">
+                <h3>친구</h3>
+                <p>새로운 친구가 추가 되었습니다. 확인해보세요!</p>
+                <button id="friend" type="button" onclick="openFriends()">자세히 보기</button>
+            </div>
+            <div class="card">
+                <h3>공지사항</h3>
+                <p>새로운 공지가 있습니다. 확인해보세요!</p>
+                <button id="notice" type="button" onclick="openSchedule()">자세히 보기</button>
+            </div>
+            <div class="card">
+                <h3>업데이트</h3>
+                <p>서비스 업데이트 정보를 확인하세요.</p>
+                <button id="update" type="button">자세히 보기</button>
+            </div>
+            <div class="card">
+                <h3>문의</h3>
+                <p>문의사항이 있으면 여기를 클릭하세요.</p>
+                <button id="call" type="button">문의하기</button>
+            </div>
+        </section>
+    </main>
 
-  <section class="cards">
-      <div class="card">
-          <h3>공지사항</h3>
-          <p>새로운 공지가 있습니다. 확인해보세요!</p>
-          <button id="notice" type="button" onclick="openSchedule()">자세히 보기</button>
-      </div>
-      <div class="card">
-          <h3>업데이트</h3>
-          <p>서비스 업데이트 정보를 확인하세요.</p>
-          <button id="update" type="button">자세히 보기</button>
-      </div>
-      <div class="card">
-          <h3>문의</h3>
-          <p>문의사항이 있으면 여기를 클릭하세요.</p>
-          <button id="call" type="button">문의하기</button>
-      </div>
-  </section>
-</main>
+    <!-- 평소에는 숨김. 보여줄 때는 main-content를 숨기고 이 섹션만 표시 -->
+    <section id="schedule" class="hidden" tabindex="-1" aria-hidden="true">
+        <h2>📅 우리들의 일정</h2>
+        <p>여기에 일정 목록을 표시합니다.</p>
 
-<!-- 평소 보이지 않음. 보여줄 때만 display:block -->
-<section id="schedule" class="hidden" tabindex="-1" aria-hidden="true">
-  <h2>📅 우리들의 일정</h2>
-  <p>여기에 일정을 표시합니다. (예시 내용)</p>
+        <button type="button">새 일정 추가하기</button>
+        <div>
+            <button type="button" class="btn-ghost" onclick="backToMain()">메인으로 돌아가기</button>
+        </div>
+    </section>
 
-  <button type="button">새 일정 추가하기</button>
-  <div>
-    <button type="button" class="btn-ghost" onclick="backToMain()">메인으로 돌아가기</button>
-  </div>
-</section>
+    <section id="friends" class="hidden" tabindex="-1" aria-hidden="true">
+        <h2>친구</h2>
+        <button id="friendadd" type="button" onclick="openFriendList()">➕ 친구 추가하기</button>
+        <p>친구 목록을 표시합니다.</p>
+        <div style="margin:8px 0">
+            <button id="load-friends-btn" type="button" class="btn-ghost">친구 목록 새로고침</button>
+            <button type="button" class="btn-ghost" onclick="backToMain()">메인으로 돌아가기</button>
+        </div>
+    </section>
 
-<script>
-/*
-  동작 설명:
-  - openSchedule(): 메인(#main-content)을 숨기고 #schedule을 보이게 만든 뒤 포커스 이동.
-  - backToMain(): #schedule 숨기고 메인 보여주기.
-  - history.pushState / popstate: 브라우저 뒤로가기/앞으로가기를 지원.
-*/
+    <section id="friendlist" class="hidden" tabindex="-1" aria-hidden="true">
+        <div id="friend-items" aria-live="polite"></div>
+    </section>
 
-const mainEl = document.getElementById('main-content');
-const scheduleEl = document.getElementById('schedule');
+    <footer>
+        <p>&copy; 2025 My Project. All rights reserved.</p>
+    </footer>
 
-function openSchedule() {
-  // 화면 전환
-  mainEl.classList.add('hidden');
-  scheduleEl.classList.remove('hidden');
+    <script>
+        // 데이터 (실제는 서버에서 fetch 해올 수 있음)
+        let friendData = [
+            { name: "김영자", category: "운동", desc: "아침 운동", phone: "01012345678"},
+            { name: "박철수", category: "스터디", desc: "자바스크립트 공부", phone: "01098765432"}
+        ];
 
-  // 접근성: 스크린리더에 보이는 상태로 변경
-  scheduleEl.setAttribute('aria-hidden', 'false');
+        // DOM 레퍼런스
+        const mainEl = document.getElementById('main-content');
+        const scheduleEl = document.getElementById('schedule');
+        const friendsEl = document.getElementById('friends');
+        const friendlistEl = document.getElementById('friendlist');
+        const friendItemsEl = document.getElementById('friend-items');
+        const loadFriendsBtn = document.getElementById('load-friends-btn');
 
-  // 포커스 이동 (tabindex="-1" 있어야 함)
-  scheduleEl.focus({ preventScroll: true });
+        // 존재 확인 유틸
+        function exists(el) { return el instanceof Element; }
 
-  // URL에 #schedule 추가 및 history 상태 저장 (뒤로가기 동작을 위해)
-  history.pushState({ page: 'schedule' }, '', '#schedule');
-}
+        // 섹션 매핑
+        const sections = {
+            main: mainEl,
+            schedule: scheduleEl,
+            friends: friendsEl,
+            friendlist: friendlistEl
+        };
 
-function backToMain() {
-  // 화면 전환
-  scheduleEl.classList.add('hidden');
-  mainEl.classList.remove('hidden');
+        // 섹션이 보여질 때 실행할 콜백들
+        const onShow = {
+            friends: () => loadFriendlist(),
+            schedule: () => {/* 필요 시 일정 로드 */},
+            friendlist: () => loadFriendlist()
+        };
 
-  scheduleEl.setAttribute('aria-hidden', 'true');
+        // 섹션 보여주기/숨기기 공용 함수
+        function showSection(name, push = true) {
+            if (!sections[name]) return;
 
-  // 포커스 메인으로
-  mainEl.querySelector('h2')?.focus?.();
+            Object.entries(sections).forEach(([key, el]) => {
+                if (!exists(el)) return;
+                const isTarget = (key === name);
+                el.classList.toggle('hidden', !isTarget);
+                el.setAttribute('aria-hidden', (!isTarget).toString());
+            });
 
-  // 뒤로가기를 사용할 경우 깔끔하게 상태를 복구
-  // pushState를 쓴 뒤 back을 눌렀을 때 popstate가 실행되므로
-  // 여기서는 history.back() 대신 URL 상태를 기본으로 돌립니다.
-  // 만약 현재 해시가 #schedule이면 해시 제거
-  if (location.hash === '#schedule') {
-    history.pushState({}, '', location.pathname + location.search);
-  }
-}
+            const target = sections[name];
+            if (exists(target)) {
+                try { target.focus({ preventScroll: true }); } catch(e) {}
+            }
 
-// 브라우저 뒤로/앞 버튼 처리: popstate 이벤트에서 현재 상태에 따라 보이기/숨기기
-window.addEventListener('popstate', (e) => {
-  // 만약 해시가 #schedule 이거나 상태 객체가 schedule이면 schedule 보이기
-  if (location.hash === '#schedule' || (e.state && e.state.page === 'schedule')) {
-    mainEl.classList.add('hidden');
-    scheduleEl.classList.remove('hidden');
-    scheduleEl.setAttribute('aria-hidden', 'false');
-    scheduleEl.focus({ preventScroll: true });
-  } else {
-    // 기본(메인) 화면
-    scheduleEl.classList.add('hidden');
-    mainEl.classList.remove('hidden');
-    scheduleEl.setAttribute('aria-hidden', 'true');
-  }
-});
+            // onShow 콜백 호출 (비동기 가능)
+            if (onShow[name]) {
+                try { onShow[name](); } catch(e) { console.error(e); }
+            }
 
-// 페이지 로드 시 URL 해시가 #schedule이면 바로 schedule 보이게 (직접 링크 시)
-window.addEventListener('load', () => {
-  if (location.hash === '#schedule') {
-    // replaceState로 초기 history 상태 설정 후 openSchedule-like 처리
-    history.replaceState({ page: 'schedule' }, '', '#schedule');
-    mainEl.classList.add('hidden');
-    scheduleEl.classList.remove('hidden');
-    scheduleEl.setAttribute('aria-hidden', 'false');
-  }
-});
-</script>
+            if (push) {
+                const urlHash = (name === 'main') ? (location.pathname + location.search) : `#${name}`;
+                const stateObj = (name === 'main') ? {} : { page: name };
+                history.pushState(stateObj, '', urlHash);
+            }
+        }
+
+        // 친구 목록 로딩 함수
+        async function loadFriendlist() {
+            // 만약 서버에서 가져온다면 아래처럼 fetch 사용
+            // const res = await fetch('/api/friends'); friendData = await res.json();
+
+            // 초기화
+            friendItemsEl.innerHTML = '';
+
+            if (!Array.isArray(friendData) || friendData.length === 0) {
+                friendItemsEl.innerHTML = '<p>친구가 없습니다.</p>';
+                return;
+            }
+
+            friendData.forEach(friend => {
+                const card = document.createElement('article');
+                card.className = 'friend-card';
+                card.innerHTML = `
+                    <p><strong>이름:</strong> ${escapeHtml(friend.name)}</p>
+                    <p><strong>카테고리:</strong> ${escapeHtml(friend.category)}</p>
+                    <p><strong>설명:</strong> ${escapeHtml(friend.desc)}</p>
+                    <p><strong>전화:</strong> <a href="tel:${escapeHtml(friend.phone)}">${escapeHtml(friend.phone)}</a></p>
+                `;
+                friendItemsEl.appendChild(card);
+            });
+        }
+
+        // 뒤로가기/앞으로가기 처리
+        window.addEventListener('popstate', (e) => {
+            const page = (e.state && e.state.page) ? e.state.page : (location.hash ? location.hash.replace('#', '') : 'main');
+            if (page in sections) showSection(page, false);
+            else showSection('main', false);
+        });
+
+        // 로드 시 해시 대응
+        window.addEventListener('load', () => {
+            const initial = location.hash ? location.hash.replace('#', '') : 'main';
+            if (initial in sections) {
+                if (initial !== 'main') history.replaceState({ page: initial }, '', `#${initial}`);
+                showSection(initial, false);
+            } else {
+                showSection('main', false);
+            }
+        });
+
+        // 섹션 오픈/클로즈 보조 함수
+        function openSchedule() { showSection('schedule'); }
+        function openFriends() { showSection('friends'); }
+        function backToMain() { showSection('main'); }
+        function openFriendList() { showSection('friendlist'); }
+
+        // 로그아웃 버튼
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                localStorage.removeItem('token');
+                alert('로그아웃 되었습니다.');
+                window.location.href = '/';
+            });
+        }
+
+        // 수동 새로고침 버튼 연결
+        if (loadFriendsBtn) loadFriendsBtn.addEventListener('click', loadFriendlist);
+    </script>
 </body>
 </html>

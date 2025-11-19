@@ -32,3 +32,10 @@
 - async: const token=jwt.sign({...}) return res.json({..., token})
     → 토큰을 응답에 포함해서 클라이언트가 사용할 수 있게 함
 - callback: 토큰을 생성은 하지만 응답값으로 token을 반환하지 않음
+
+(2025/11/19)
+1. apiRouter.js에서 sql과 변수가 달랐던 문제 해결 : nick -> name (수정)
+2. button의 각각의 show() -> showSection() 함수로 통일
+3. 친구 요청 전송 함수 작성
+4. 다음날 해야할 일
+- friendlist 섹션 안에 추천 친구 정보 넣기 (친구 요청 전송 함수 완성하기)

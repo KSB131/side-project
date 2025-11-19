@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>메인 페이지</title>
     <link rel="stylesheet" href="/main.css">
+    <style>
+        .hidden { display: none; }
+        .friend-card { padding: 8px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 8px; }
+        .friend-card p { margin: 4px 0; }
+        .btn-ghost { background: transparent; border: 1px solid #ccc; padding: 6px 10px; border-radius: 4px; }
+    </style>
 </head>
 <body>
     <header>
@@ -33,7 +39,6 @@
             <div class="card">
                 <h3>공지사항</h3>
                 <p>새로운 공지가 있습니다. 확인해보세요!</p>
-                <!-- show('schedule') 대신 openSchedule() 호출 -->
                 <button id="notice" type="button" onclick="openSchedule()">자세히 보기</button>
             </div>
             <div class="card">
@@ -62,15 +67,16 @@
 
     <section id="friends" class="hidden" tabindex="-1" aria-hidden="true">
         <h2>친구</h2>
+        <button id="friendadd" type="button" onclick="openFriendList()">➕ 친구 추가하기</button>
         <p>친구 목록을 표시합니다.</p>
-        <button onclick="loadFriendlist()">친구 목록 열기</button>
-        <div>
+        <div style="margin:8px 0">
+            <button id="load-friends-btn" type="button" class="btn-ghost">친구 목록 새로고침</button>
             <button type="button" class="btn-ghost" onclick="backToMain()">메인으로 돌아가기</button>
         </div>
+    </section>
 
-        <div id="friendlist">
-            <div id="friend-items"></div>
-        </div>
+    <section id="friendlist" class="hidden" tabindex="-1" aria-hidden="true">
+        <div id="friend-items" aria-live="polite"></div>
     </section>
 
     <footer>
@@ -78,37 +84,42 @@
     </footer>
 
     <script>
-        const friendlistEl = document.getElementById("friendlist");
-        const friendItemsEl = document.getElementById("friend-items");
-        const friendSection = document.getElementById("friends");
+        // 데이터 (실제는 서버에서 fetch 해올 수 있음)
         let friendData = [
-            { name: "김영자", category: "운동", desc: "아침 운동", phone: "01012345678"}
-        ]
-        async function loadFriendlist() {
-            friends
-        }
-    </script>
-    <script>
-        // 요소 가져오기 (안전하게)
+            { name: "김영자", category: "운동", desc: "아침 운동", phone: "01012345678"},
+            { name: "박철수", category: "스터디", desc: "자바스크립트 공부", phone: "01098765432"}
+        ];
+
+        // DOM 레퍼런스
         const mainEl = document.getElementById('main-content');
         const scheduleEl = document.getElementById('schedule');
         const friendsEl = document.getElementById('friends');
+        const friendlistEl = document.getElementById('friendlist');
+        const friendItemsEl = document.getElementById('friend-items');
+        const loadFriendsBtn = document.getElementById('load-friends-btn');
 
         // 존재 확인 유틸
         function exists(el) { return el instanceof Element; }
 
-        // 모든 섹션 목록 (메인 포함)
+        // 섹션 매핑
         const sections = {
             main: mainEl,
             schedule: scheduleEl,
-            friends: friendsEl
+            friends: friendsEl,
+            friendlist: friendlistEl
+        };
+
+        // 섹션이 보여질 때 실행할 콜백들
+        const onShow = {
+            friends: () => loadFriendlist(),
+            schedule: () => {/* 필요 시 일정 로드 */},
+            friendlist: () => loadFriendlist()
         };
 
         // 섹션 보여주기/숨기기 공용 함수
         function showSection(name, push = true) {
             if (!sections[name]) return;
 
-            // 숨길 것 / 보일 것 결정
             Object.entries(sections).forEach(([key, el]) => {
                 if (!exists(el)) return;
                 const isTarget = (key === name);
@@ -116,13 +127,16 @@
                 el.setAttribute('aria-hidden', (!isTarget).toString());
             });
 
-            // 포커스 이동 (target 요소에 tabindex="-1" 있어야 함)
             const target = sections[name];
             if (exists(target)) {
-                try { target.focus({ preventScroll: true }); } catch(e) { /* 일부 브라우저 안전성 */ }
+                try { target.focus({ preventScroll: true }); } catch(e) {}
             }
 
-            // history 관리: 해시와 state에 맞춰 저장
+            // onShow 콜백 호출 (비동기 가능)
+            if (onShow[name]) {
+                try { onShow[name](); } catch(e) { console.error(e); }
+            }
+
             if (push) {
                 const urlHash = (name === 'main') ? (location.pathname + location.search) : `#${name}`;
                 const stateObj = (name === 'main') ? {} : { page: name };
@@ -130,19 +144,43 @@
             }
         }
 
+        // 친구 목록 로딩 함수
+        async function loadFriendlist() {
+            // 만약 서버에서 가져온다면 아래처럼 fetch 사용
+            // const res = await fetch('/api/friends'); friendData = await res.json();
+
+            // 초기화
+            friendItemsEl.innerHTML = '';
+
+            if (!Array.isArray(friendData) || friendData.length === 0) {
+                friendItemsEl.innerHTML = '<p>친구가 없습니다.</p>';
+                return;
+            }
+
+            friendData.forEach(friend => {
+                const card = document.createElement('article');
+                card.className = 'friend-card';
+                card.innerHTML = `
+                    <p><strong>이름:</strong> ${escapeHtml(friend.name)}</p>
+                    <p><strong>카테고리:</strong> ${escapeHtml(friend.category)}</p>
+                    <p><strong>설명:</strong> ${escapeHtml(friend.desc)}</p>
+                    <p><strong>전화:</strong> <a href="tel:${escapeHtml(friend.phone)}">${escapeHtml(friend.phone)}</a></p>
+                `;
+                friendItemsEl.appendChild(card);
+            });
+        }
+
         // 뒤로가기/앞으로가기 처리
         window.addEventListener('popstate', (e) => {
-            // 우선 state에서 판단, 없으면 hash로 판단
             const page = (e.state && e.state.page) ? e.state.page : (location.hash ? location.hash.replace('#', '') : 'main');
             if (page in sections) showSection(page, false);
             else showSection('main', false);
         });
 
-        // 로드 시 해시/직접 링크 대응
+        // 로드 시 해시 대응
         window.addEventListener('load', () => {
             const initial = location.hash ? location.hash.replace('#', '') : 'main';
             if (initial in sections) {
-                // replaceState로 초기 상태 설정 (뒤로가기 과도한 쌓임 방지)
                 if (initial !== 'main') history.replaceState({ page: initial }, '', `#${initial}`);
                 showSection(initial, false);
             } else {
@@ -150,19 +188,25 @@
             }
         });
 
-        // 기존 개별 함수들은 아래처럼 간단히 연결
+        // 섹션 오픈/클로즈 보조 함수
         function openSchedule() { showSection('schedule'); }
         function openFriends() { showSection('friends'); }
         function backToMain() { showSection('main'); }
+        function openFriendList() { showSection('friendlist'); }
 
-        // 로그아웃 버튼 예시
+        // 로그아웃 버튼
         const logoutBtn = document.getElementById('logoutBtn');
-        logoutBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            localStorage.removeItem('token');
-            alert('로그아웃 되었습니다.');
-            window.location.href = '/';
-        });
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                localStorage.removeItem('token');
+                alert('로그아웃 되었습니다.');
+                window.location.href = '/';
+            });
+        }
+
+        // 수동 새로고침 버튼 연결
+        if (loadFriendsBtn) loadFriendsBtn.addEventListener('click', loadFriendlist);
     </script>
 </body>
 </html>

@@ -12,7 +12,7 @@
             <form id="registerForm">
                 <input type="text" id="regId" placeholder="ID"><br>
                 <input type="password" id="regPw" placeholder="PW"><br>
-                <input type="text" id="regNick" placeholder="NICK"><br>
+                <input type="text" id="regName" placeholder="NAME"><br>
                 <button id="registerBtn" type="button">회원가입</button><br>
             </form>
         </div>
@@ -24,12 +24,12 @@
         btn.addEventListener('click', async () => {
             const id = document.getElementById('regId').value;
             const pw = document.getElementById('regPw').value;
-            const nick = document.getElementById('regNick').value;
+            const name = document.getElementById('regName').value;
 
             const res = await fetch('/api/register', {
                 method: "POST",
                 headers: { "Content-Type" : "application/json" },
-                body: JSON.stringify({ id, pw, nick})
+                body: JSON.stringify({ id, pw, name})
             });
             const data = await res.json();
 
