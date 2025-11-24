@@ -32,32 +32,32 @@ router.post('/register', async (req, res) => {
     }
 });
 
-// 로그인 라우터 -> JWT 발급
+// 로그인 - 세션 사용
 router.post('/login', async (req, res) => {
-    try {
-        const { id, pw } = req.body;
-        if (!id || !pw) return res.status(400).json({ success: false, message: 'id & pw 필요'})
-        
-        const sql ='SELECT * FROM tb_member WHERE id=? AND pw=?';
-        const params = [ id, pw ];
+  try {
+    const { id, pw } = req.body;
+    if (!id || !pw) return res.status(400).json({ success: false, message: 'id & pw 필요' });
 
-        const [rows] = await db.execute(sql, params);
+    const sql ='SELECT * FROM tb_member WHERE id=? AND pw=?';
+    const params = [ id, pw ];
 
-        if (rows.length > 0) {
-            const user = rows[0];
-            const token = jwt.sign({
-                id: user.id,
-                name: user.name
-            }, "my-secret-key", {expiresIn: '1h'});
-            return res.json({ success: true, message: "로그인 성공", token})
-        } else {
-            return res.json({ success: false, message: "로그인 실패"});
-        }
-    } catch(err) {
-        console.error('login error:', err);
-        res.status(500).json({ success: false, message: "서버 오류"});
+    const [rows] = await db.execute(sql, params);
+
+    if (rows.length > 0) {
+      const user = rows[0];
+
+      // 세션에 사용자 정보 저장
+      req.session.user = { id: user.id, name: user.name, id_num: user.id_num };
+
+      return res.json({ success: true, message: "로그인 성공" });
+    } else {
+      return res.status(401).json({ success: false, message: "로그인 실패" });
     }
-})
+  } catch(err) {
+    console.error('login error:', err);
+    res.status(500).json({ success: false, message: "서버 오류" });
+  }
+});
 
 
 // 회원정보 수정 라우터(JWT 포함)
