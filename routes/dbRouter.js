@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
-
+const { ensureLoggedIn } = require('connect-ensure-login');
 
 // 사용자 조회
-router.post("/addFriend", async (req, res) => {
+router.post("/findUser", async (req, res) => {
     console.log('/addFriends headers.cookie=', req.headers.cookie);
     console.log('/addFriends req.session=', req.session);
     if (!req.session.user)
@@ -125,8 +125,8 @@ router.get('/getFriends', async (req, res) => {
 });
 
 
-// 친구 저장gi
-router.post('/db/addFriend', ensureLoggedIn, async (req, res) => {
+// 친구 저장
+router.post('/addFriend', ensureLoggedIn('/login'), async (req, res) => {
     try {
         const userId = req.session.userId;        // 로그인한 사용자의 user_id
         const friendId = req.body.friendId;       // 프론트에서 전달된 friendId
