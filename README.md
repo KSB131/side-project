@@ -72,3 +72,10 @@
 
 ### 서버 (apiRouter.js)
     - 특별한 로직 변경은 없고, 현재 코드에서 문제되는 부분은 없음(로그인시 req.session.user에 저장하는 방식과 일치).
+
+(2025/11/27)
+1. findNearbyFriends() 삭제
+- 거리 로직을 기반으로 친구 정보를 불러오는 함수 -> 삭제
+- 함수 안에 존재하는 renderFriendsFind(list) 함수를 부르는 코드도 같이 삭제 됨
+2. findUser() 함수 생성 -> 함수 내부에 renderFriednsFind() 호출
+- db에서 friend 정보를 json형태로 받아와서 변수(list)에 저장. render...(list)로 호출

@@ -67,10 +67,8 @@
 
     <section id="friends" class="hidden" tabindex="-1" aria-hidden="true">
         <h2>친구</h2>
-        <button id="friendadd" type="button" onclick="findNearbyFriends()">➕ 친구 목록</button>
+        <button id="friendadd" type="button" onclick="openFriendList()">➕ 친구 목록</button>
         <p>친구 목록을 표시합니다.</p>
-
-        
 
         <div style="margin:8px 0">
             <button id="load-friends-btn" type="button" class="btn-ghost">친구 목록 새로고침</button>
@@ -143,8 +141,30 @@
             }
         }
 
-        /* ---------- renderFriendsFind (거리 관련 제거된 렌더러) ---------- */
+        async function findUser() {
+            const res = await fetch("/db/findUser", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include"
+            });
+            
+            const result = await res.json();
+            const Find = result.data || [];
+
+            const list = Find.map(f => ({
+                id: f.id,
+                name: f.name || f.id,
+                hobby: f.hobby || "친구",
+                profile_text: `💬 ${f.profile_text || "같이 활동할 친구입니다."}`,
+                phone: f.phone || ""
+            }));
+
+            renderFriendsFind(list);
+        }
+
+        /* ---------- renderFriendsFind (친구 목록 카드 렌더러) ---------- */
         function renderFriendsFind(list) {
+
             const container = document.getElementById("friends-find");
             if (!container) {
                 console.warn('#friends-find 컨테이너가 없습니다.');
@@ -286,69 +306,6 @@
             });
         }
 
-        /* ---------- loggedInUserId 초기화 ---------- */
-        let loggedInUserId = localStorage.getItem("loggedInUser");
-        document.addEventListener("DOMContentLoaded", () => {
-            loggedInUserId = localStorage.getItem("loggedInUser");
-        });
-
-        /* ---------- findNearbyFriends (거리 로직 없이 서버에서 목록 요청) ---------- */
-        async function findNearbyFriends() {
-            showSection('friendlist');
-
-            if (!navigator.geolocation) {
-                alert("이 브라우저는 위치 서비스를 지원하지 않습니다.");
-                return;
-            }
-
-            navigator.geolocation.getCurrentPosition(async (pos) => {
-                const { latitude, longitude } = pos.coords;
-
-                try {
-                // 서버에서 친구 목록을 가져옴 (distance 필드 없이 처리)
-                const res = await fetch("/db/findUser", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "include",
-                    body: JSON.stringify({ latitude, longitude }),
-                });
-
-                if (res.status === 401) {
-                    alert("로그인이 필요해요.");
-                    return;
-                }
-
-                const result = await res.json();
-                if (!result.success) {
-                    alert("오류: " + (result.message || '친구 목록 조회 실패'));
-                    return;
-                }
-
-                const nearbyFriendsFind = result.data || [];
-
-                const list = nearbyFriendsFind.map(f => ({
-                    id: f.id,
-                    name: f.name || f.id,
-                    hobby: f.hobby || "친구",
-                    profile_text: `💬 ${f.profile_text || "같이 활동할 친구입니다."}`,
-                    phone: f.phone || ""
-                }));
-
-                renderFriendsFind(list);
-
-                } catch (err) {
-                console.error('findNearbyFriends error', err);
-                alert('근처 친구 검색 중 오류가 발생했습니다.');
-                renderFriendsFind([]);
-                }
-            }, (err) => {
-                console.error('geolocation error', err);
-                alert('위치 정보를 가져올 수 없습니다. 권한을 확인하세요.');
-            }, { enableHighAccuracy: true, timeout: 10000 });
-        }
-        
-
-
         // DOM 레퍼런스
         const mainEl = document.getElementById('main-content');
         const scheduleEl = document.getElementById('schedule');
@@ -401,6 +358,10 @@
                 const stateObj = (name === 'main') ? {} : { page: name };
                 history.pushState(stateObj, '', urlHash);
             }
+
+            if (name === "friendlist") {
+                findUser();
+            }
         }
 
         
@@ -430,6 +391,21 @@
                     return;
                 }
 
+                const list = Array.isArray(json.data) ? json.data : [];
+                if (list.length === 0) {
+                    friendItemsEl.innerHTML += '<p>추천 친구가 없습니다.</p>';
+                } else {
+                    list.forEach(p => {
+                        const div = document.createElement('div')
+                        div.className = 'friend-card';
+                        div.innerHTML = `
+                            <p><strong>${escapeHtml(p.name || p.id)}</strong></p>
+                            <p>관심: ${escapeHtml(p.hobby || "친구")}</p>
+                            <p>${escapeHtml(p.profile_text || "")}</p>
+                        `;
+                        friendItemsEl.appendChild(div);
+                    })
+                }
 
             } catch (err) {
                 console.error('loadFriendlist error', err);
@@ -474,9 +450,6 @@
                 window.location.href = '/';
             });
         }
-
-        // 수동 새로고침 버튼 연결
-        if (loadFriendsBtn) loadFriendsBtn.addEventListener('click', loadFriendlist);
 
         // 세션 체크
         async function checkSession() {

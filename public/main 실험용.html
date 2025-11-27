@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>메인 페이지</title>
+    <link rel="stylesheet" href="/main.css">
+    <style>
+        .hidden { display: none; }
+        .friend-card { padding: 8px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 8px; }
+        .friend-card p { margin: 4px 0; }
+        .btn-ghost { background: transparent; border: 1px solid #ccc; padding: 6px 10px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+<header>
+    <h1>환영합니다!</h1>
+    <nav>
+        <a href="/main">홈</a>
+        <a href="/profile">프로필</a>
+        <a href="/logout" id="logoutBtn">로그아웃</a>
+        <a href="/dashboard">대시보드</a>
+    </nav>
+</header>
+
+<main id="main-content">
+    <section class="welcome-section">
+        <h2>안녕하세요, 사용자님!</h2>
+        <p>이곳은 메인 페이지입니다. 원하는 기능을 이용해보세요.</p>
+    </section>
+
+    <section class="cards">
+        <div class="card">
+            <h3>친구</h3>
+            <p>새로운 친구가 추가 되었습니다. 확인해보세요!</p>
+            <button id="friend" type="button" onclick="openFriends()">자세히 보기</button>
+        </div>
+        <div class="card">
+            <h3>공지사항</h3>
+            <p>새로운 공지가 있습니다. 확인해보세요!</p>
+            <button id="notice" type="button" onclick="openSchedule()">자세히 보기</button>
+        </div>
+        <div class="card">
+            <h3>업데이트</h3>
+            <p>서비스 업데이트 정보를 확인하세요.</p>
+            <button id="update" type="button">자세히 보기</button>
+        </div>
+        <div class="card">
+            <h3>문의</h3>
+            <p>문의사항이 있으면 여기를 클릭하세요.</p>
+            <button id="call" type="button">문의하기</button>
+        </div>
+    </section>
+</main>
+
+<section id="schedule" class="hidden" tabindex="-1" aria-hidden="true">
+    <h2>📅 우리들의 일정</h2>
+    <p>여기에 일정 목록을 표시합니다.</p>
+    <button type="button">새 일정 추가하기</button>
+    <div>
+        <button type="button" class="btn-ghost" onclick="backToMain()">메인으로 돌아가기</button>
+    </div>
+</section>
+
+<section id="friends" class="hidden" tabindex="-1" aria-hidden="true">
+    <h2>친구</h2>
+    <div id="friends-find" style="margin-top:12px;"></div>
+    <div style="margin:8px 0">
+        <button type="button" class="btn-ghost" onclick="backToMain()">메인으로 돌아가기</button>
+    </div>
+</section>
+
+<section id="friendlist" class="hidden" tabindex="-1" aria-hidden="true">
+    <h2>추천 친구</h2>
+    <div id="friend-items" aria-live="polite"></div>
+    <div style="margin:8px 0">
+        <button id="load-friends-btn" type="button" class="btn-ghost">추천 친구 새로고침</button>
+        <button type="button" class="btn-ghost" onclick="backToMain()">메인으로 돌아가기</button>
+    </div>
+</section>
+
+<footer>
+    <p>&copy; 2025 My Project. All rights reserved.</p>
+</footer>
+
+<script>
+/* -------------------- 공통 함수 -------------------- */
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;")
+              .replace(/"/g, "&quot;")
+              .replace(/'/g, "&#039;");
+}
+
+async function sendFriendRequest(friendId) {
+    try {
+        const res = await fetch('/db/addFriend', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ friendId })
+        });
+        const json = await res.json();
+        return res.ok && json.success;
+    } catch (err) {
+        console.error('sendFriendRequest error', err);
+        return false;
+    }
+}
+
+function createPersonCard(person, opts = {}) {
+    const { showAddButton = true, addButtonText = '➕ 친구 요청', onAdd = null } = opts;
+    const itemBox = document.createElement('div');
+    itemBox.className = 'person-card';
+    itemBox.style.cssText = `
+        display:flex; justify-content:space-between; align-items:center;
+        max-width:600px; border:1px solid #ccc; border-radius:12px;
+        padding:16px; margin-bottom:12px; background-color:#fff;
+        box-shadow:0 2px 6px rgba(0,0,0,0.06);
+    `;
+
+    const infoBox = document.createElement('div');
+    infoBox.style.cssText = 'display:flex; flex-direction:column; flex:1; max-width:70%; margin-right:12px;';
+
+    const nameEl = document.createElement('h3');
+    nameEl.textContent = escapeHtml(person.name || person.id || '');
+    nameEl.style.marginBottom = "6px";
+
+    const categoryEl = document.createElement("div");
+    categoryEl.textContent = `관심: ${escapeHtml(person.hobby || '친구')}`;
+    categoryEl.style.color = "#555";
+    categoryEl.style.fontSize = "15px";
+
+    const profileEl = document.createElement("p");
+    profileEl.textContent = escapeHtml(person.profile_text || '');
+    profileEl.style.fontSize = "14px";
+    profileEl.style.margin = "6px 0";
+
+    const phoneEl = document.createElement("div");
+    phoneEl.innerHTML = person.phone ? `연락처: <a href="tel:${escapeHtml(person.phone)}">${escapeHtml(person.phone)}</a>` : '연락처: 없음';
+    phoneEl.style.fontSize = "14px";
+    phoneEl.style.color = "#666";
+
+    infoBox.appendChild(nameEl);
+    infoBox.appendChild(categoryEl);
+    infoBox.appendChild(profileEl);
+    infoBox.appendChild(phoneEl);
+
+    const actionBox = document.createElement("div");
+    actionBox.style.display = "flex";
+    actionBox.style.flexDirection = "column";
+    actionBox.style.alignItems = "flex-end";
+    actionBox.style.gap = "8px";
+
+    if (showAddButton && typeof onAdd === 'function') {
+        const addBtn = document.createElement("button");
+        addBtn.type = 'button';
+        addBtn.textContent = addButtonText;
+        addBtn.style.cssText = `
+            margin-top:10px; padding:8px 14px; border-radius:8px;
+            background-color:#00796B; color:#fff; border:0; cursor:pointer;
+        `;
+        addBtn.addEventListener('click', async () => await onAdd(person, addBtn, itemBox));
+        actionBox.appendChild(addBtn);
+    }
+
+    itemBox.appendChild(infoBox);
+    itemBox.appendChild(actionBox);
+    return itemBox;
+}
+
+/* -------------------- 친구 섹션 렌더 -------------------- */
+function renderFriendSections(list) {
+    const friendsFindEl = document.getElementById('friends-find');
+    const friendItemsEl = document.getElementById('friend-items');
+    friendsFindEl.innerHTML = '';
+    friendItemsEl.innerHTML = '<h1>추천 친구 목록</h1>';
+
+    list.forEach(person => {
+        if (person.isFriend) {
+            // 이미 친구
+            const card = createPersonCard(person, { showAddButton: false });
+            friendsFindEl.appendChild(card);
+        } else {
+            // 아직 친구가 아닌 경우
+            const card = createPersonCard(person, {
+                showAddButton: true,
+                onAdd: async (p, btn, cardEl) => {
+                    if (!confirm(`${p.name || p.id}님에게 친구 요청을 보내시겠습니까?`)) return;
+                    btn.disabled = true;
+                    btn.textContent = '요청중...';
+                    const ok = await sendFriendRequest(p.id);
+                    if (ok) {
+                        btn.textContent = '요청 완료';
+                        btn.style.background = 'gray';
+                        // 친구로 이동
+                        document.getElementById('friends-find').appendChild(cardEl);
+                    } else {
+                        btn.disabled = false;
+                        btn.textContent = '➕ 친구 요청';
+                        alert('친구 요청 실패');
+                    }
+                }
+            });
+            friendItemsEl.appendChild(card);
+        }
+    });
+
+    if (friendItemsEl.children.length === 1) friendItemsEl.innerHTML += "<p>추천 친구가 없습니다.</p>";
+    if (friendsFindEl.children.length === 0) friendsFindEl.innerHTML = "<p>친구가 없습니다.</p>";
+}
+
+/* -------------------- 친구 데이터 로드 -------------------- */
+async function loadFriendlist() {
+    try {
+        const res = await fetch('/db/getFriends', { method: 'GET', credentials: 'include' });
+        if (!res.ok) return;
+        const json = await res.json();
+        const list = Array.isArray(json.data) ? json.data : [];
+        renderFriendSections(list);
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+/* -------------------- 섹션 전환 -------------------- */
+const sections = {
+    main: document.getElementById('main-content'),
+    schedule: document.getElementById('schedule'),
+    friends: document.getElementById('friends'),
+    friendlist: document.getElementById('friendlist')
+};
+
+const onShow = {
+    friends: () => loadFriendlist(),
+    friendlist: () => loadFriendlist()
+};
+
+function showSection(name, push = true) {
+    Object.entries(sections).forEach(([key, el]) => {
+        el.classList.toggle('hidden', key !== name);
+        el.setAttribute('aria-hidden', (key !== name).toString());
+    });
+    if (onShow[name]) onShow[name]();
+    if (push) {
+        const urlHash = (name === 'main') ? location.pathname : `#${name}`;
+        history.pushState({ page: name }, '', urlHash);
+    }
+}
+
+function openSchedule() { showSection('schedule'); }
+function openFriends() { showSection('friends'); }
+function openFriendList() { showSection('friendlist'); }
+function backToMain() { showSection('main'); }
+
+/* -------------------- 버튼 및 이벤트 -------------------- */
+document.getElementById('load-friends-btn')?.addEventListener('click', loadFriendlist);
+document.getElementById('logoutBtn')?.addEventListener('click', e => {
+    e.preventDefault();
+    localStorage.removeItem('token');
+    alert('로그아웃 되었습니다.');
+    window.location.href = '/';
+});
+
+window.addEventListener('popstate', e => {
+    const page = e.state?.page || (location.hash ? location.hash.replace('#','') : 'main');
+    showSection(page, false);
+});
+
+window.addEventListener('load', () => {
+    const initial = location.hash ? location.hash.replace('#','') : 'main';
+    showSection(initial, false);
+});
+</script>
+</body>
+</html>

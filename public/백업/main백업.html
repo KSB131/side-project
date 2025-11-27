@@ -16,7 +16,7 @@
     <header>
         <h1>환영합니다!</h1>
         <nav>
-            <a href="/">홈</a>
+            <a href="/main">홈</a>
             <a href="/profile">프로필</a>
             <a href="/logout" id="logoutBtn">로그아웃</a>
             <a href="/dashboard">대시보드</a>
@@ -67,8 +67,9 @@
 
     <section id="friends" class="hidden" tabindex="-1" aria-hidden="true">
         <h2>친구</h2>
-        <button id="friendadd" type="button" onclick="openFriendList()">➕ 친구 추가하기</button>
+        <button id="friendadd" type="button" onclick="openFriendList()">➕ 친구 목록</button>
         <p>친구 목록을 표시합니다.</p>
+
         <div style="margin:8px 0">
             <button id="load-friends-btn" type="button" class="btn-ghost">친구 목록 새로고침</button>
             <button type="button" class="btn-ghost" onclick="backToMain()">메인으로 돌아가기</button>
@@ -77,6 +78,7 @@
 
     <section id="friendlist" class="hidden" tabindex="-1" aria-hidden="true">
         <div id="friend-items" aria-live="polite"></div>
+        <div id="friends-find" style="margin-top:12px;"></div>
     </section>
 
     <footer>
@@ -84,11 +86,225 @@
     </footer>
 
     <script>
-        // 데이터 (실제는 서버에서 fetch 해올 수 있음)
-        let friendData = [
-            { name: "김영자", category: "운동", desc: "아침 운동", phone: "01012345678"},
-            { name: "박철수", category: "스터디", desc: "자바스크립트 공부", phone: "01098765432"}
-        ];
+        function escapeHtml (str) {
+            if (!str) return '';
+            return str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;")
+        }
+
+        async function sendFriendRequest(friendId, btnElement) {
+            try {
+                if (btnElement) {
+                    btnElement.disabled = true;
+                    const prevText = btnElement.textContent;
+                    btnElement.textContent = '요청중...';
+
+                    const res = await fetch('/db/addFriend', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ friendId })
+                    });
+                    const json = await res.json();
+
+                    if (res.ok && json.success) {
+                        btnElement.textContent = '요청 완료';
+                        btnElement.style.background = 'gray';
+                    } else {
+                        alert(json?.message || '친구 요청 실패');
+                        btnElement.disabled = false;
+                        btnElement.textContent = prevText;
+                    }
+                } else {
+                    // btnElement가 없을 때 간단 호출 형태
+                    const res = await fetch('/db/addFriend', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ friendId })
+                    });
+                    const json = await res.json();
+                    return res.ok && json.success;
+                }
+            } catch (err) {
+                console.error('sendFriendRequest error', err);
+                if (btnElement) {
+                btnElement.disabled = false;
+                btnElement.textContent = '➕ 친구 요청';
+                }
+                alert('네트워크 오류');
+                return false;
+            }
+        }
+
+        async function findUser() {
+            const res = await fetch("/db/findUser", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include"
+            });
+            
+            const result = await res.json();
+            const Find = result.data || [];
+
+            const list = Find.map(f => ({
+                id: f.id,
+                name: f.name || f.id,
+                hobby: f.hobby || "친구",
+                profile_text: `💬 ${f.profile_text || "같이 활동할 친구입니다."}`,
+                phone: f.phone || ""
+            }));
+
+            renderFriendsFind(list);
+        }
+
+        /* ---------- renderFriendsFind (친구 목록 카드 렌더러) ---------- */
+        function renderFriendsFind(list) {
+
+            const container = document.getElementById("friends-find");
+            if (!container) {
+                console.warn('#friends-find 컨테이너가 없습니다.');
+                return;
+            }
+            container.innerHTML = "";
+
+            if (!Array.isArray(list) || list.length === 0) {
+                container.innerHTML = "<p>근처에 친구가 없습니다.</p>";
+                return;
+            }
+
+            list.forEach(person => {
+                const itemBox = document.createElement("div");
+                itemBox.className = 'person-item';
+                itemBox.style.cssText = `
+                display:flex; justify-content:space-between; align-items:center;
+                max-width:600px; border:1px solid #ccc; border-radius:12px;
+                padding:16px; margin-bottom:12px; background-color:#fff;
+                box-shadow:0 2px 6px rgba(0,0,0,0.06);
+                `;
+
+                const infoBox = document.createElement("div");
+                infoBox.style.cssText = 'display:flex; flex-direction:column; flex:1; max-width:70%; margin-right:12px;';
+
+                const nameEl = document.createElement("h3");
+                nameEl.textContent = escapeHtml(person.name || person.id || '');
+                nameEl.style.marginBottom = "6px";
+
+                const categoryEl = document.createElement("div");
+                categoryEl.textContent = `관심: ${escapeHtml(person.hobby || '친구')}`;
+                categoryEl.style.color = "#555";
+                categoryEl.style.fontSize = "15px";
+
+                const profile_textEl = document.createElement("p");
+                profile_textEl.textContent = escapeHtml(person.profile_text || '');
+                profile_textEl.style.fontSize = "14px";
+                profile_textEl.style.margin = "6px 0";
+
+                const phoneEl = document.createElement("div");
+                phoneEl.innerHTML = person.phone ? `연락처: <a href="tel:${escapeHtml(person.phone)}">${escapeHtml(person.phone)}</a>` : '연락처: 없음';
+                phoneEl.style.fontSize = "14px";
+                phoneEl.style.color = "#666";
+
+                infoBox.appendChild(nameEl);
+                infoBox.appendChild(categoryEl);
+                infoBox.appendChild(profile_textEl);
+                infoBox.appendChild(phoneEl);
+
+                const actionBox = document.createElement("div");
+                actionBox.style.display = "flex";
+                actionBox.style.flexDirection = "column";
+                actionBox.style.alignItems = "flex-end";
+                actionBox.style.gap = "8px";
+
+                const addBtn = document.createElement("button");
+                addBtn.type = 'button';
+                addBtn.textContent = "➕ 친구 요청";
+                addBtn.style.cssText = `
+                margin-top:10px; padding:8px 14px; border-radius:8px;
+                background-color:#00796B; color:#fff; border:0; cursor:pointer;
+                `;
+                addBtn.addEventListener('click', () => {
+                const nameLabel = person.name || person.id || '사용자';
+                if (!confirm(`${nameLabel}님에게 친구 요청을 보내시겠습니까?`)) return;
+                sendFriendRequest(person.id, addBtn);
+                });
+
+                actionBox.appendChild(addBtn);
+                itemBox.appendChild(infoBox);
+                itemBox.appendChild(actionBox);
+                container.appendChild(itemBox);
+            });
+        }
+
+        /* ---------- renderNearby (간단 렌더러) ---------- */
+        function renderNearby(containerId, list = []) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (!Array.isArray(list) || list.length === 0) {
+                container.innerHTML = '<p>근처에 친구가 없습니다.</p>';
+                return;
+            }
+
+            list.forEach(person => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'nearby-item';
+                wrapper.style.cssText = `
+                display:flex; justify-content:space-between; align-items:center;
+                padding:10px; border:1px solid #eee; border-radius:8px; margin-bottom:8px;
+                `;
+
+                const info = document.createElement('div');
+                info.innerHTML = `
+                <div style="font-weight:600">${escapeHtml(person.name || person.id)}</div>
+                <div style="font-size:13px; color:#555">관심: ${escapeHtml(person.hobby || '친구')}</div>
+                <div style="font-size:13px; color:#777">${escapeHtml(person.profile_text || '')}</div>
+                `;
+
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.textContent = '➕ 친구 요청';
+                btn.style.cssText = `padding:6px 10px; border-radius:8px; border:0; background:#0a84ff; color:#fff; cursor:pointer;`;
+                btn.addEventListener('click', async () => {
+                    const confirmed = confirm(`${person.name || person.id}님에게 친구요청을 보내시겠습니까?`);
+                    if (!confirmed) return;
+                    btn.disabled = true;
+                    const originalText = btn.textContent;
+                    btn.textContent = '요청중...';
+                    try {
+                        const res = await fetch('/db/findUser', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({ friendId: person.id })
+                        });
+                        const json = await res.json();
+                        if (res.ok && json.success) {
+                            btn.textContent = '요청 완료';
+                            btn.style.background = 'gray';
+                        } else {
+                            alert(json?.message || '친구 요청 실패');
+                            btn.disabled = false;
+                            btn.textContent = originalText;
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        alert('네트워크 오류');
+                        btn.disabled = false;
+                        btn.textContent = originalText;
+                    }
+                });
+
+                wrapper.appendChild(info);
+                wrapper.appendChild(btn);
+                container.appendChild(wrapper);
+            });
+        }
 
         // DOM 레퍼런스
         const mainEl = document.getElementById('main-content');
@@ -142,33 +358,63 @@
                 const stateObj = (name === 'main') ? {} : { page: name };
                 history.pushState(stateObj, '', urlHash);
             }
-        }
 
-        // 친구 목록 로딩 함수
-        async function loadFriendlist() {
-            // 만약 서버에서 가져온다면 아래처럼 fetch 사용
-            // const res = await fetch('/api/friends'); friendData = await res.json();
-
-            // 초기화
-            friendItemsEl.innerHTML = '';
-
-            if (!Array.isArray(friendData) || friendData.length === 0) {
-                friendItemsEl.innerHTML = '<p>친구가 없습니다.</p>';
-                return;
+            if (name === "friendlist") {
+                findUser();
             }
-
-            friendData.forEach(friend => {
-                const card = document.createElement('article');
-                card.className = 'friend-card';
-                card.innerHTML = `
-                    <p><strong>이름:</strong> ${escapeHtml(friend.name)}</p>
-                    <p><strong>카테고리:</strong> ${escapeHtml(friend.category)}</p>
-                    <p><strong>설명:</strong> ${escapeHtml(friend.desc)}</p>
-                    <p><strong>전화:</strong> <a href="tel:${escapeHtml(friend.phone)}">${escapeHtml(friend.phone)}</a></p>
-                `;
-                friendItemsEl.appendChild(card);
-            });
         }
+
+        
+        // 친구 목록 로드
+        async function loadFriendlist() {
+            if (!friendItemsEl) return;
+            friendItemsEl.innerHTML = `<br><br>
+                                    <h1>친구 추천 목록</h1>`;
+
+            try {
+                const res = await fetch('/db/getFriends', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+
+                // 만약 401이나 기타 상태면 처리
+                if (res.status === 401) {
+                    friendItemsEl.innerHTML = '<p>로그인이 필요합니다..</p>';
+                    return;
+                }
+
+                const json = await res.json();
+
+                if (!res.ok || !json.success) {
+                    const msg = json?.message || '친구 목록을 불러오지 못했습니다.';
+                    friendItemsEl.innerHTML = `<p>${escapeHtml(msg)}</p>`;
+                    return;
+                }
+
+                const list = Array.isArray(json.data) ? json.data : [];
+                if (list.length === 0) {
+                    friendItemsEl.innerHTML += '<p>추천 친구가 없습니다.</p>';
+                } else {
+                    list.forEach(p => {
+                        const div = document.createElement('div')
+                        div.className = 'friend-card';
+                        div.innerHTML = `
+                            <p><strong>${escapeHtml(p.name || p.id)}</strong></p>
+                            <p>관심: ${escapeHtml(p.hobby || "친구")}</p>
+                            <p>${escapeHtml(p.profile_text || "")}</p>
+                        `;
+                        friendItemsEl.appendChild(div);
+                    })
+                }
+
+            } catch (err) {
+                console.error('loadFriendlist error', err);
+                friendItemsEl.innerHTML = '<p>네트워크 오류로 친구를 불러올 수 없습니다.</p>';
+            }
+        }
+
+        if (loadFriendsBtn) loadFriendsBtn.addEventListener('click', loadFriendlist);
+
 
         // 뒤로가기/앞으로가기 처리
         window.addEventListener('popstate', (e) => {
@@ -205,8 +451,26 @@
             });
         }
 
-        // 수동 새로고침 버튼 연결
-        if (loadFriendsBtn) loadFriendsBtn.addEventListener('click', loadFriendlist);
+        // 세션 체크
+        async function checkSession() {
+            try {
+                const res = await fetch('/db/getFriends', {
+                    method: "GET",
+                    credentials: 'include'
+                });
+
+                if (res.status === 401) {
+                    alert('로그인 세션이 만료되었습니다.');
+                    window.location.href = '/';
+                }
+            } catch (err) {
+                console.error('세션 확인 중 오류 발생', err);
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            checkSession();
+        })
     </script>
 </body>
 </html>
