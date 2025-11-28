@@ -392,7 +392,7 @@
                 }
 
                 const list = Array.isArray(json.data) ? json.data : [];
-                if (list.length === 0) {
+                if (!list) {
                     friendItemsEl.innerHTML += '<p>추천 친구가 없습니다.</p>';
                 } else {
                     list.forEach(p => {
