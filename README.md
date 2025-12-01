@@ -79,3 +79,18 @@
 - 함수 안에 존재하는 renderFriendsFind(list) 함수를 부르는 코드도 같이 삭제 됨
 2. findUser() 함수 생성 -> 함수 내부에 renderFriednsFind() 호출
 - db에서 friend 정보를 json형태로 받아와서 변수(list)에 저장. render...(list)로 호출
+
+(2025/12/1)
+### 코드 문제점
+1. 중복 코드
+- 친구 요청 로직 코드 : sendFriendRequest / renderNearby함수 로직 동일
+- 반복되는 escapeHtml 사용
+2. 사용되지 않는 함수/코드
+- renderNearby함수 사용 x
+- onShow.schedule 콜백에서 호출 내용 없음
+- 일부 버튼(update, call)에 클릭 이벤트가 정의되지 않음.
+3. 개선
+- 친구 요청 로직 통합 : sendFriendRequest로 모든 버튼 이벤트 통합
+- 렌더링 함수 통합 : renderFriendFind와 renderNearby 합치기
+- 중복 제거 : friend-card
+- 사용 안하는 함수 제거 : renderNearby 

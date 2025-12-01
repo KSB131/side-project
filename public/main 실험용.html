@@ -64,6 +64,7 @@
 
 <section id="friends" class="hidden" tabindex="-1" aria-hidden="true">
     <h2>친구</h2>
+    <button id="friendadd" type="button" onclick="openFriendList()">➕ 친구 목록</button>
     <div id="friends-find" style="margin-top:12px;"></div>
     <div style="margin:8px 0">
         <button type="button" class="btn-ghost" onclick="backToMain()">메인으로 돌아가기</button>
@@ -71,7 +72,6 @@
 </section>
 
 <section id="friendlist" class="hidden" tabindex="-1" aria-hidden="true">
-    <h2>추천 친구</h2>
     <div id="friend-items" aria-live="polite"></div>
     <div style="margin:8px 0">
         <button id="load-friends-btn" type="button" class="btn-ghost">추천 친구 새로고침</button>
@@ -176,7 +176,7 @@ function renderFriendSections(list) {
     const friendsFindEl = document.getElementById('friends-find');
     const friendItemsEl = document.getElementById('friend-items');
     friendsFindEl.innerHTML = '';
-    friendItemsEl.innerHTML = '<h1>추천 친구 목록</h1>';
+    friendItemsEl.innerHTML = '<br><h1>추천 친구 목록</h1>';
 
     list.forEach(person => {
         if (person.isFriend) {
@@ -208,7 +208,7 @@ function renderFriendSections(list) {
         }
     });
 
-    if (friendItemsEl.children.length === 1) friendItemsEl.innerHTML += "<p>추천 친구가 없습니다.</p>";
+    if (friendItemsEl.children.length === 2) friendItemsEl.innerHTML += "<br><p>추천 친구가 없습니다.</p>";
     if (friendsFindEl.children.length === 0) friendsFindEl.innerHTML = "<p>친구가 없습니다.</p>";
 }
 
